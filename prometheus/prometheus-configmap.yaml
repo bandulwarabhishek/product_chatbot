@@ -1,0 +1,38 @@
+# ============================================================================
+# KUBERNETES CONFIGMAP FOR PROMETHEUS MONITORING CONFIGURATION
+# ============================================================================
+# This file defines how Prometheus should scrape metrics from applications
+
+apiVersion: v1                    # Kubernetes API version for ConfigMaps
+kind: ConfigMap                   # Resource type - ConfigMap stores non-sensitive configuration data
+
+metadata:
+  name: prometheus-config         # Name of this ConfigMap resource
+  namespace: monitoring            # Kubernetes namespace - isolates resources (organize by deployment)
+
+data:
+  # ConfigMap data section - stores key-value pairs mounted as files in pods
+  prometheus.yml: |              # Configuration file for Prometheus server (YAML format)
+    
+    # ── GLOBAL SETTINGS ──────────────────────────────────────────────────
+    global:
+      scrape_interval: 15s        # How often Prometheus scrapes metrics from targets (15 seconds)
+                                  # Smaller = more data/overhead; larger = less frequent monitoring
+
+    # ── SCRAPE CONFIGURATIONS ────────────────────────────────────────────
+    scrape_configs:               # List of monitoring targets (applications/services to collect metrics from)
+      
+      # ── Target 1: Prometheus itself ──────────────────────────────────
+      - job_name: 'prometheus'    # Job identifier - group name for this scrape target
+        static_configs:           # Static endpoint definition (hardcoded targets)
+          - targets: ['localhost:9090']   # Prometheus server metrics endpoint
+                                          # localhost:9090 = default Prometheus UI/metrics port
+
+      # ── Target 2: Flask RAG Chatbot App ──────────────────────────────
+      - job_name: 'flask-app'     # Job identifier for Flask application monitoring
+        metrics_path: /metrics    # URL path where Flask exposes Prometheus metrics
+                                  # (Flask app uses prometheus_client library at this endpoint)
+        static_configs:           # Static endpoint definition
+          - targets: ['34.132.25.27:5000']  # Flask app IP address and port
+                                            # 34.132.25.27 = External/Load Balancer IP
+                                            # 5000 = Flask app port (matches Kubernetes Service targetPort)

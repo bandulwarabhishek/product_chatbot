@@ -1,0 +1,79 @@
+# ============================================================================
+# KUBERNETES DEPLOYMENT FOR PROMETHEUS METRICS COLLECTION & STORAGE
+# ============================================================================
+# This file deploys Prometheus - a time-series database that scrapes and stores
+# metrics from the Flask chatbot app and makes them available to Grafana
+
+# ── DEPLOYMENT SECTION ────────────────────────────────────────────────────
+apiVersion: apps/v1            # Kubernetes API version for deployments
+kind: Deployment                # Resource type - manages pod replicas
+
+metadata:
+  name: prometheus              # Name of this Prometheus deployment
+  namespace: monitoring          # Kubernetes namespace - groups related monitoring resources
+
+spec:
+  # Deployment specification
+  replicas: 1                   # Number of Prometheus pod instances (1 = single instance)
+  
+  selector:
+    matchLabels:
+      app: prometheus           # Selector label to identify Prometheus pods
+  
+  template:
+    # Pod template specification
+    metadata:
+      labels:
+        app: prometheus         # Label attached to each Prometheus pod
+    
+    spec:
+      # Pod containers specification
+      containers:
+        - name: prometheus      # Container name within the pod
+          image: prom/prometheus # Official Prometheus Docker image from DockerHub
+          
+          args:
+            # Command-line arguments passed to Prometheus container startup
+            - "--config.file=/etc/prometheus/prometheus.yml"  # Path to Prometheus config file
+                                                               # (mounted from ConfigMap below)
+          
+          ports:
+            - containerPort: 9090  # Prometheus web UI and API listen on port 9090
+                                   # Default Prometheus port for UI dashboard
+          
+          volumeMounts:
+            # Mount volumes (config, storage) into the container
+            - name: config-volume              # Reference to volume definition below
+              mountPath: /etc/prometheus       # Path inside container where config is mounted
+                                               # Prometheus reads prometheus.yml from this path
+      
+      # Volumes section - define storage/config sources for pods
+      volumes:
+        - name: config-volume                  # Volume name (referenced by volumeMounts above)
+          configMap:                           # Source type - references a ConfigMap
+            name: prometheus-config            # Name of ConfigMap to mount
+                                               # Contains prometheus.yml from prometheus-configmap.yaml
+
+---
+# ── SERVICE SECTION ──────────────────────────────────────────────────────
+apiVersion: v1                  # Kubernetes API version for services
+kind: Service                   # Resource type - exposes Prometheus to network traffic
+
+metadata:
+  name: prometheus-service      # Name of this service
+  namespace: monitoring          # Same namespace as Prometheus deployment
+
+spec:
+  # Service specification
+  selector:
+    app: prometheus             # Routes traffic to pods with this label (connects to Deployment)
+  
+  ports:
+    - protocol: TCP             # Network protocol for traffic
+      port: 9090                # Kubernetes cluster internal port (accessible within cluster)
+      targetPort: 9090          # Pod container port that traffic routes to
+      nodePort: 32001           # Node-level port for external access
+                                # Users/Grafana access via: <node-ip>:32001
+  
+  type: NodePort                # Service type - exposes service on all node IPs at nodePort
+                                # (alternatives: ClusterIP=internal only, LoadBalancer=cloud managed)

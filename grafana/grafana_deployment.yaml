@@ -1,0 +1,60 @@
+# ============================================================================
+# KUBERNETES DEPLOYMENT FOR GRAFANA VISUALIZATION & DASHBOARDING
+# ============================================================================
+# This file deploys Grafana - a metrics visualization platform that connects 
+# to Prometheus to display dashboards showing chatbot performance metrics
+
+# ── DEPLOYMENT SECTION ────────────────────────────────────────────────────
+apiVersion: apps/v1            # Kubernetes API version for deployments
+kind: Deployment                # Resource type - manages pod replicas
+
+metadata:
+  name: grafana                 # Name of this Grafana deployment
+  namespace: monitoring          # Kubernetes namespace - same as Prometheus for discovery
+
+spec:
+  # Deployment specification
+  replicas: 1                   # Number of Grafana pod instances (1 = single instance)
+  
+  selector:
+    matchLabels:
+      app: grafana              # Selector label to identify Grafana pods
+  
+  template:
+    # Pod template specification
+    metadata:
+      labels:
+        app: grafana            # Label attached to each Grafana pod (service uses this to find pods)
+    
+    spec:
+      # Pod containers specification
+      containers:
+        - name: grafana         # Container name within the pod
+          image: grafana/grafana # Official Grafana Docker image from DockerHub
+          
+          ports:
+            - containerPort: 3000  # Grafana web UI listens on port 3000 (default Grafana port)
+
+# ── SERVICE SECTION ──────────────────────────────────────────────────────
+---                             # YAML document separator - new Kubernetes resource
+apiVersion: v1                  # Kubernetes API version for services
+kind: Service                   # Resource type - exposes Grafana to network traffic
+
+metadata:
+  name: grafana-service         # Name of this service
+  namespace: monitoring          # Same namespace as Grafana deployment
+
+spec:
+  # Service specification
+  selector:
+    app: grafana                # Routes traffic to pods with this label (connects to Deployment)
+  
+  ports:
+    - protocol: TCP             # Network protocol for traffic
+      port: 3000                # Kubernetes cluster internal port (accessible within cluster)
+      targetPort: 3000          # Pod container port that traffic routes to
+      nodePort: 32000           # Node-level port for external access
+                                # Users access via: <node-ip>:32000 to reach Grafana
+  
+  type: NodePort                # Service type - exposes service on all node IPs at nodePort
+                                # (alternatives: ClusterIP=internal only, LoadBalancer=cloud managed)

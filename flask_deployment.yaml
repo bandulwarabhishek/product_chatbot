@@ -1,0 +1,82 @@
+# ============================================================================
+# KUBERNETES DEPLOYMENT CONFIGURATION FOR FLASK RAG CHATBOT APPLICATION
+# ============================================================================
+# This file defines how to deploy the Flask chatbot application on Kubernetes
+
+# ── DEPLOYMENT SECTION ────────────────────────────────────────────────────
+apiVersion: apps/v1  # Kubernetes API version for deployments
+kind: Deployment     # Type of Kubernetes resource - Deployment manages pod replicas
+
+metadata:
+  name: flask-app        # Name of this deployment resource
+  labels:
+    app: flask          # Label to identify this deployment (used for grouping/selection)
+
+spec:
+  # Deployment specification - defines how pods should be created and managed
+  replicas: 1           # Number of pod copies to run (1 = single instance, increase for high availability)
+  
+  selector:
+    matchLabels:
+      app: flask        # Selector to find which pods belong to this deployment (must match pod labels)
+  
+  template:
+    # Pod template - blueprint for creating pods
+    metadata:
+      labels:
+        app: flask      # Label attached to each pod (enables service to find pods via selector)
+    
+    spec:
+      # Pod specification - defines containers and their configuration
+      containers:
+      - name: flask-container                # Container name within the pod
+        image: flask-app:latest              # Docker image to run (format: repository:tag)
+        imagePullPolicy: IfNotPresent        # Image pull strategy - only pull if not already on node
+        
+        ports:
+          - containerPort: 5000              # Port exposed by Flask app inside container (Flask default)
+        
+        envFrom:
+          # Load environment variables from Kubernetes secrets
+          - secretRef:
+              name: llmops-secrets           # References a Kubernetes Secret containing sensitive credentials
+                                             # (API keys, tokens, database passwords stored securely)
+
+# ── SERVICE SECTION ──────────────────────────────────────────────────────
+---                    # YAML document separator - defines a new resource below
+apiVersion: v1         # Kubernetes API version for services
+kind: Service          # Type of resource - Service exposes pods to network traffic
+
+metadata:
+  name: flask-service  # Name of this service
+
+spec:
+  type: LoadBalancer   # Service type - LoadBalancer exposes service externally with external IP/DNS
+                       # (alternatives: ClusterIP for internal-only, NodePort for node-level access)
+  
+  selector:
+    app: flask         # Selector to route traffic to pods with matching label (connects to Deployment pods)
+  
+  ports:
+    - protocol: TCP    # Network protocol for this port mapping
+      port: 80         # External port (users/clients access via port 80)
+      targetPort: 5000 # Internal container port Flask listens on (5000 is Flask default)
+
+
+
+
+# Two Main Resources:
+# Deployment - Manages the Flask application containers
+  # Creates 1 replica (copy) of your Flask app running in a container
+  # Uses the Docker image flask-app:latest
+  # Exposes container port 5000 (Flask's default port)
+  # Loads secrets (API keys, tokens) from llmops-secrets
+
+#   Service - Exposes the Flask app to external traffic
+  # Acts as a load balancer routing external traffic to your pods
+  # Maps external port 80 (standard HTTP) → internal port 5000 (Flask)
+  # Uses selector app: flask to find and route to the Deployment's pods
+  # Key Concepts:
+  # replicas: 1 - You can increase this for multiple instances (high availability)
+  # LoadBalancer - Provides external access; can be changed to ClusterIP for internal-only access
+  # envFrom/secretRef - Securely injects credentials without hardcoding them in the file
