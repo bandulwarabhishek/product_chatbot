@@ -142,8 +142,8 @@ Demo  :
 ### 4. Interlink your Github on VSCode and on VM
 
 ```bash
-git config --global user.email "gyrogodnon@gmail.com"
-git config --global user.name "data-guru0"
+git config --global user.email "abhishekbandulwar161@gmail.com"
+git config --global user.name "bandulwarabhishek"
 
 git add .
 git commit -m "commit"
@@ -151,7 +151,7 @@ git push origin main
 ```
 
 - When prompted:
-  - **Username**: `data-guru0`
+  - **Username**: `bandulwarabhishek`
   - **Password**: GitHub token (paste, it's invisible)
 
 ---
@@ -232,7 +232,3 @@ Green success mesaage shown....
 
 ######################################
 
-
-Now make a dashboard for different visualization
-See course video for that....
-```
